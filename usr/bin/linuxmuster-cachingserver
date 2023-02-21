@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+#########################################################
+# 
+# by Netzint GmbH 2023
+# Lukas Spitznagel (lukas.spitznagel@netzint.de)
+# 
+#########################################################
+
+import argparse
+import json
+import random
+import string
+
+def register(name, ip, school):
+    servers = json.load(open("/var/lib/linuxmuster-cachingserver/servers.json", "r"))
+    if name not in servers:
+        servers[name] = {
+            "name": name,
+            "ip": ip,
+            "school": school,
+            "key": ''.join(random.choices(string.ascii_uppercase + string.digits, k=50))
+        }
+        with open("/var/lib/linuxmuster-cachingserver/servers.json", "w") as f:
+            json.dump(servers, f, indent=4)
+        return { "status": True, "message": "Server added!", "object": servers[name] }
+    else:
+        return { "status": False, "message": "Server already exist!" }
+
+def output(text, printjson=False):
+    if printjson:
+        print(json.dumps(text))
+    else:
+        status = "SUCCESS" if text["status"] else "ERROR"
+        print("[%s] %s" % (status, text["message"]))
+        if "object" in text:
+            print("Parameters: " + str(text["object"]))
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", required=False, help="Print debug output", action="store_true")
+    parser.add_argument("--json", required=False, help="Print output as json", action="store_true")
+
+    subparsers = parser.add_subparsers(dest="command")
+    parserRegister = subparsers.add_parser("register", help="Register a new caching server")
+    parserRegister.add_argument("-n", "--name", required=True, help='Name of the cachingserver (hostname)')
+    parserRegister.add_argument("-i", "--ip", required=True, help='IP of the cachingserver')
+    parserRegister.add_argument("-s", "--school", required=True, help='School for the cachingserver')
+
+    parserStatus = subparsers.add_parser("status", help="Status of caching server(s)")
+    parserStatus.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
+    
+    args = parser.parse_args()
+
+    if not args.json:
+        print("""
+=======================================================================
+    _     ___ _   _ _   ___  ____  __ _   _ ____ _____ _____ ____  
+   | |   |_ _| \ | | | | \ \/ /  \/  | | | / ___|_   _| ____|  _ \ 
+   | |    | ||  \| | | | |\  /| |\/| | | | \___ \ | | |  _| | |_) |
+   | |___ | || |\  | |_| |/  \| |  | | |_| |___) || | | |___|  _ < 
+   |_____|___|_| \_|\___//_/\_\_|  |_|\___/|____/ |_| |_____|_| \_\
+
+
+  Commandline-Tool to configure and manage LINUXMUSTER-Cachingserver!
+
+=======================================================================
+        """)
+        print("You run command: " + args.command)
+
+    if args.command == "register":
+        result = register(args.name, args.ip, args.school)
+        output(result, args.json)
+
+
+
+if __name__ == "__main__":
+    main()
