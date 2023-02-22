@@ -8,4 +8,4 @@ Package: linuxmuster-cachingserver-server
 Architecture: all
 Depends: linuxmuster-linbo7
 Homepage: www.netzint.de
-Description: offical Netzint device manager addon for linuxmuster.net v7.x webui
+Description: Linuxmuster Cachingserver for Main-Server
