@@ -14,6 +14,7 @@ import string
 
 def register(name, ip, school):
     servers = json.load(open("/var/lib/linuxmuster-cachingserver/servers.json", "r"))
+    config = json.load(open("/etc/linuxmuster-cachingserver/config.json", "r"))
     if name not in servers:
         servers[name] = {
             "name": name,
@@ -23,6 +24,10 @@ def register(name, ip, school):
         }
         with open("/var/lib/linuxmuster-cachingserver/servers.json", "w") as f:
             json.dump(servers, f, indent=4)
+
+        servers[name]["server_ip"] = config["ip"]
+        servers[name]["server_port"] = config["port"]
+
         return { "status": True, "message": "Server added!", "object": servers[name] }
     else:
         return { "status": False, "message": "Server already exist!" }
