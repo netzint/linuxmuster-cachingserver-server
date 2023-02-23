@@ -11,24 +11,28 @@ import argparse
 import json
 import random
 import string
+import socket
 
-def register(name, ip, school):
+def register(name, ip, gateway, school):
     servers = json.load(open("/var/lib/linuxmuster-cachingserver/servers.json", "r"))
     config = json.load(open("/etc/linuxmuster-cachingserver/config.json", "r"))
     if name not in servers:
         servers[name] = {
             "name": name,
             "ip": ip,
+            "gateway": gateway,
             "school": school,
             "key": ''.join(random.choices(string.ascii_uppercase + string.digits, k=50))
         }
         with open("/var/lib/linuxmuster-cachingserver/servers.json", "w") as f:
             json.dump(servers, f, indent=4)
 
-        servers[name]["server_ip"] = config["ip"]
+        servers[name]["server_ip"] = socket.gethostbyname(socket.gethostname())
         servers[name]["server_port"] = config["port"]
+        servers[name]["server_name"] = socket.gethostname().split(".", 1)[0]
+        servers[name]["server_domain"] = socket.gethostname().split(".", 1)[1]
 
-        return { "status": True, "message": "Server added!", "object": servers[name] }
+        return { "status": True, "message": "Server added!", "command": servers[name] }
     else:
         return { "status": False, "message": "Server already exist!" }
 
@@ -38,8 +42,23 @@ def output(text, printjson=False):
     else:
         status = "SUCCESS" if text["status"] else "ERROR"
         print("[%s] %s" % (status, text["message"]))
-        if "object" in text:
-            print("Parameters: " + str(text["object"]))
+        if "command" in text:
+            print()
+            print("###########################################################")
+            print("Please run the following command on the satellite-server:")
+            command = "linuxmuster-cachingserver setup "
+            command += "--serverip " + text["command"]["server_ip"] + " "
+            command += "--serverport " + str(text["command"]["server_port"]) + " "
+            command += "--servername " + text["command"]["server_name"] + " "
+            command += "--serverdomain " + text["command"]["server_domain"] + " "
+            command += "--name " + text["command"]["name"] + " "
+            command += "--ip " + text["command"]["ip"] + " "
+            command += "--gateway " + text["command"]["gateway"] + " "
+            command += "--school " + text["command"]["school"] + " "
+            command += "--key \"" + text["command"]["key"] + "\""
+            print(command)
+            print("###########################################################")
+
 
 
 def main():
@@ -51,6 +70,7 @@ def main():
     parserRegister = subparsers.add_parser("register", help="Register a new caching server")
     parserRegister.add_argument("-n", "--name", required=True, help='Name of the cachingserver (hostname)')
     parserRegister.add_argument("-i", "--ip", required=True, help='IP of the cachingserver')
+    parserRegister.add_argument("-g", "--gateway", required=True, help='Gateway of the cachingserver')
     parserRegister.add_argument("-s", "--school", required=True, help='School for the cachingserver')
 
     parserStatus = subparsers.add_parser("status", help="Status of caching server(s)")
@@ -75,7 +95,7 @@ def main():
         print("You run command: " + args.command)
 
     if args.command == "register":
-        result = register(args.name, args.ip, args.school)
+        result = register(args.name, args.ip, args.gateway, args.school)
         output(result, args.json)
 
 

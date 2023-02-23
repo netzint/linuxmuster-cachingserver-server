@@ -27,7 +27,10 @@ def getConfig():
     return json.load(open("/etc/linuxmuster-cachingserver/config.json", "r"))
 
 def receiveMessage(conn):
-    message = conn.recv(1024).decode()
+    try:
+        message = conn.recv(1024).decode()
+    except:
+        return None
     logging.debug(f"[{conn.getpeername()[0]}] Receive command '{message}'")
     return message
 
@@ -56,7 +59,7 @@ def sendFile(conn, filename):
     logging.info(f"[{conn.getpeername()[0]}] File {filename} send successfully!")
     return True
 
-def sendFiles(conn, pattern, delete=False):
+def sendFiles(conn, pattern, delete=False, end=True):
     returnVal = True
     for filename in glob.glob(pattern, recursive=True):
         if os.path.isfile(filename):
@@ -64,8 +67,10 @@ def sendFiles(conn, pattern, delete=False):
                 returnVal = False
             if delete:
                 os.remove(filename)
-    sendMessage(conn, "end")
-    logging.info(f"[{conn.getpeername()[0]}] All files are send successfully!")
+    
+    if end:
+        sendMessage(conn, "end")
+        logging.info(f"[{conn.getpeername()[0]}] All files are send successfully!")
     return returnVal
 
 def main():
@@ -120,7 +125,7 @@ def main():
             "pattern": "/srv/linbo/log/*"
         },
         "dhcp": {
-            "pattern": "/etc/dhcp/**/*"
+            "pattern": "/etc/dhcp/subnets.conf;/etc/dhcp/devices/#school#.conf"
         },
     }
 
@@ -134,7 +139,12 @@ def main():
             error(conn, addr, f"[{addr[0]}] Server not registered!")
             continue
 
-        message = receiveMessage(conn).split(" ", 1)
+        message = receiveMessage(conn)
+        if message == None:
+            error(conn, addr, f"[{addr[0]}] Invalid message reveived!")
+            continue
+
+        message = message.split(" ", 1)
         if message[0] == "auth":
             if message[1] == serverCheck["key"]:
                 logging.info(f"[{addr[0]}] Authenification successful!")
@@ -144,6 +154,10 @@ def main():
                 continue
 
         message = receiveMessage(conn).split(" ", 1)
+        if message == None:
+            error(conn, addr, f"[{addr[0]}] Invalid message reveived!")
+            continue
+
         if message[0] == "get":
             if message[1] in actions:
                 sendMessage(conn, "ok")
@@ -154,22 +168,40 @@ def main():
                 pattern = actions[message[1]]["pattern"].replace("#school#", serverCheck["school"])
                 delete = actions[message[1]]["delete"] if "delete" in actions[message[1]] else False
 
-                if not sendFiles(conn, pattern, delete):
-                    error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
-                    continue
+                if ";" in pattern:
+                    pat_split = pattern.split(";")
+                    count = 1
+                    for pat in pat_split:
+                        if count == len(pat_split):
+                            if not sendFiles(conn, pat, delete):
+                                error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
+                                continue
+                        else:
+                            if not sendFiles(conn, pat, delete, False):
+                                error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
+                                continue
+
+                        count+= 1
+
+                else:
+                    if not sendFiles(conn, pattern, delete):
+                        error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
+                        continue
             else:
                 sendMessage(conn, "invalid")
                 error(conn, addr, f"[{addr[0]}] Client send invalid action!")
                 continue
 
         conn.close()
-    server.close()
 
 
 
 if __name__ == "__main__":
     logging.info("======= STARTED =======")
     try:
+        main()
+    except UnicodeDecodeError:
+        logging.info("======= INVALID CONNECTION - RESTARTED =======")
         main()
     except KeyboardInterrupt:
         logging.info("======= STOPPED (by user) =======")
