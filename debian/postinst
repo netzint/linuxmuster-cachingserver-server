@@ -16,6 +16,15 @@ case "$1" in
         if [ ! -f $realConfig ]; then
             cp $exampleConfig $realConfig
         fi
+
+        mkdir -p /var/log/linuxmuster/cachingserver/
+
+        systemctl enable linuxmuster-cachingserver-server
+        systemctl start linuxmuster-cachingserver-server
+
+        mkdir -p /var/lib/linuxmuster/hooks/device-import.post.d
+        ln -s /usr/lib/linuxmuster-cachingserver-server/helper_scripts/hook-executor-import-devices.sh /var/lib/linuxmuster/hooks/device-import.post.d/
+
         exit 0
         ;;
     upgrade|abort-upgrade)

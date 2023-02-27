@@ -13,7 +13,7 @@ import json
 import glob
 import os
 
-logging.basicConfig(filename='/var/log/linuxmuster/cachingserver-server.log',format='%(levelname)s: %(asctime)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(filename='/var/log/linuxmuster/cachingserver/server.log',format='%(levelname)s: %(asctime)s %(message)s', level=logging.DEBUG)
 
 def error(conn, addr, msg):
     logging.error(msg)
@@ -21,7 +21,18 @@ def error(conn, addr, msg):
     logging.error(f"Connection with {addr} terminated!")
 
 def sendMessage(conn, msg):
+    if len(msg) > 40:
+        logging.debug(f"[{conn.getpeername()[0]}] Send message '" + msg[:40].replace('\n', '') + "...'")
+    else:
+        logging.debug(f"[{conn.getpeername()[0]}] Send message '{msg}'")
     conn.send(msg.encode("utf-8"))
+
+def sendData(conn, data, part=None):
+    if part != None:
+        logging.debug(f"[{conn.getpeername()[0]}] [{part}] Send data...")
+    else:
+        logging.debug(f"[{conn.getpeername()[0]}] Send data...")
+    conn.send(data)
 
 def getConfig():
     return json.load(open("/etc/linuxmuster-cachingserver/config.json", "r"))
@@ -31,11 +42,20 @@ def receiveMessage(conn):
         message = conn.recv(1024).decode()
     except:
         return None
-    logging.debug(f"[{conn.getpeername()[0]}] Receive command '{message}'")
+    logging.debug(f"[{conn.getpeername()[0]}] Receive message '{message}'")
     return message
 
 def getRegisteredServers():
-    return json.load(open("/var/lib/linuxmuster-cachingserver/servers.json", "r"))
+    file = open("/var/lib/linuxmuster-cachingserver/servers.json", "r")
+    json_result = json.load(file)
+    file.close()
+    return json_result
+
+def getActions():
+    file = open("/etc/linuxmuster-cachingserver/actions.json", "r")
+    json_result = json.load(file)
+    file.close()
+    return json_result
 
 def checkServer(serversFile, ip):
     for server in serversFile:
@@ -44,16 +64,21 @@ def checkServer(serversFile, ip):
     return False
 
 def sendFile(conn, filename):
-    logging.info(f"[{conn.getpeername()[0]}] Send file {filename}")
     sendMessage(conn, "file")
     if receiveMessage(conn) != "ok":
         return False
-    file = open(filename, "r")
+    file = open(filename, "rb")
     data = file.read()
-    sendMessage(conn, filename + ";" + str(len(data)))
+    file.close()
+    filesize = os.stat(filename).st_size
+    logging.info(f"[{conn.getpeername()[0]}] Sending file {filename} with {filesize} bytes")
+    sendMessage(conn, filename + ";" + str(filesize))
     if receiveMessage(conn) != "ok":
         return False
-    sendMessage(conn, data)
+    if filesize > 0:
+        fileparts = (int(filesize / 1024) + 1)
+        logging.debug(f"[{conn.getpeername()[0]}] Sending file in {fileparts} parts")
+        sendData(conn, data)
     if receiveMessage(conn) != "ok":
         return False
     logging.info(f"[{conn.getpeername()[0]}] File {filename} send successfully!")
@@ -71,6 +96,7 @@ def sendFiles(conn, pattern, delete=False, end=True):
     if end:
         sendMessage(conn, "end")
         logging.info(f"[{conn.getpeername()[0]}] All files are send successfully!")
+
     return returnVal
 
 def main():
@@ -79,6 +105,7 @@ def main():
     logging.info(f"Starting Cachingserver-Server on {ip}:{port}")
     
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((ip, port))
     server.listen()
 
@@ -86,48 +113,7 @@ def main():
 
     logging.info("Server started!")
 
-    actions = {
-        "rsync-config": {
-            "pattern": "/etc/rsyncd.conf"
-        },
-        "rsync-secret": {
-            "pattern": "/etc/rsyncd.secrets"
-        },
-        "ssh-keys": {
-            "pattern": "/root/.ssh/id_rsa*"
-        },
-        "linuxmuster-setup": {
-            "pattern": "/var/lib/linuxmuster/setup.ini"
-        },
-        "linbo-start-conf": {
-            "pattern": "/srv/linbo/start.conf.*"
-        },
-        "linbo-grub-conf": {
-            "pattern": "/srv/linbo/boot/grub/*.cfg"
-        },
-        "linbo-image-reg": {
-            "pattern": "/srv/linbo/images/*/*.reg"
-        },
-        "linbo-image-postsync": {
-            "pattern": "/srv/linbo/images/*/*.postsync"
-        },
-        "linbo-image-prestart": {
-            "pattern": "/srv/linbo/images/*/*.prestart"
-        },
-        "linbo-linbocmd": {
-            "pattern": "/srv/linbo/linbocmd/*",
-            "delete": True
-        },
-        "linuxmuster-devices": {
-            "pattern": "/etc/linuxmuster/sophomorix/#school#/devices.csv"
-        },
-        "linbo-log": {
-            "pattern": "/srv/linbo/log/*"
-        },
-        "dhcp": {
-            "pattern": "/etc/dhcp/subnets.conf;/etc/dhcp/devices/#school#.conf"
-        },
-    }
+    actions = getActions()
 
     while True:
         conn, addr = server.accept()
@@ -152,49 +138,78 @@ def main():
             else:
                 error(conn, addr, f"[{addr[0]}] Authenification failed! Reset connection!")
                 continue
-
-        message = receiveMessage(conn).split(" ", 1)
-        if message == None:
-            error(conn, addr, f"[{addr[0]}] Invalid message reveived!")
-            continue
-
-        if message[0] == "get":
-            if message[1] in actions:
-                sendMessage(conn, "ok")
-                if receiveMessage(conn) != "start":
-                    error(conn, addr, f"[{addr[0]}] Client send invalid start command!")
-                    continue
-                
-                pattern = actions[message[1]]["pattern"].replace("#school#", serverCheck["school"])
-                delete = actions[message[1]]["delete"] if "delete" in actions[message[1]] else False
-
-                if ";" in pattern:
-                    pat_split = pattern.split(";")
-                    count = 1
-                    for pat in pat_split:
-                        if count == len(pat_split):
-                            if not sendFiles(conn, pat, delete):
-                                error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
-                                continue
-                        else:
-                            if not sendFiles(conn, pat, delete, False):
-                                error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
-                                continue
-
-                        count+= 1
-
-                else:
-                    if not sendFiles(conn, pattern, delete):
-                        error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
-                        continue
-            else:
-                sendMessage(conn, "invalid")
-                error(conn, addr, f"[{addr[0]}] Client send invalid action!")
+        
+        while True:
+            message = receiveMessage(conn).split(" ", 1)
+            if message == None:
+                error(conn, addr, f"[{addr[0]}] Invalid message reveived!")
                 continue
 
+            if message[0] == "get":
+                if message[1] in actions:
+                    sendMessage(conn, "ok")
+                    logging.debug(f"[{addr[0]}] Action is valid!")
+
+                    # check for prehook
+                    if receiveMessage(conn) == "prehook?":
+                        prehook = actions[message[1]]["prehook"] if "prehook" in actions[message[1]] else "no"
+                        sendMessage(conn, prehook)
+                        if receiveMessage(conn) != "done":
+                            logging.error(f"[{addr[0]}] Client said prehook failed!")
+                        else:
+                            logging.info(f"[{addr[0]}] Client said prehook was successful!")
+                    else:
+                        error(conn, addr, f"[{addr[0]}] Client send invalid prehook command!")
+                        continue
+
+                    if receiveMessage(conn) != "start":
+                        error(conn, addr, f"[{addr[0]}] Client send invalid start command!")
+                        continue
+                    
+                    pattern = actions[message[1]]["pattern"].replace("#school#", serverCheck["school"])
+                    delete = actions[message[1]]["delete"] if "delete" in actions[message[1]] else False
+
+                    if ";" in pattern:
+                        pat_split = pattern.split(";")
+                        count = 1
+                        for pat in pat_split:
+                            if count == len(pat_split):
+                                if not sendFiles(conn, pat, delete):
+                                    error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
+                                    continue
+                            else:
+                                if not sendFiles(conn, pat, delete, False):
+                                    error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
+                                    continue
+
+                            count+= 1
+
+                    else:
+                        if not sendFiles(conn, pattern, delete):
+                            error(conn, addr, f"[{addr[0]}] Error while sending file to client!")
+                            continue
+
+                    # check for posthook
+                    if receiveMessage(conn) == "posthook?":
+                        posthook = actions[message[1]]["posthook"] if "posthook" in actions[message[1]] else "no"
+                        sendMessage(conn, posthook)
+                        if receiveMessage(conn) != "done":
+                            logging.error(f"[{addr[0]}] Client said posthook failed!")
+                        else:
+                            logging.info(f"[{addr[0]}] Client said posthook was successful!")
+                    else:
+                        error(conn, addr, f"[{addr[0]}] Client send invalid posthook command!")
+                        continue
+
+                else:
+                    sendMessage(conn, "invalid")
+                    error(conn, addr, f"[{addr[0]}] Client send invalid action!")
+                    continue
+            elif message[0] == "bye":
+                logging.info(f"[{conn.getpeername()[0]}] Client disconnected!")
+                break
+
         conn.close()
-
-
 
 if __name__ == "__main__":
     logging.info("======= STARTED =======")
