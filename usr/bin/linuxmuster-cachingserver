@@ -15,7 +15,7 @@ import socket
 
 import sys
 
-sys.path.insert(0, '/opt/linuxmuster-cachingserver-server/usr/lib/linuxmuster-cachingserver-server/')
+sys.path.insert(0, '/usr/lib/linuxmuster-cachingserver-server/')
 
 from client import api as cachingserver_api
 
