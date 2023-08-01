@@ -10,13 +10,6 @@ case "$1" in
             cp $exampleConfig $realConfig
         fi
 
-        exampleConfig="/etc/linuxmuster-cachingserver/config.json.example"
-        realConfig="/etc/linuxmuster-cachingserver/config.json"
-
-        if [ ! -f $realConfig ]; then
-            cp $exampleConfig $realConfig
-        fi
-
         mkdir -p /var/log/linuxmuster/cachingserver/
 
         systemctl enable linuxmuster-cachingserver-server
