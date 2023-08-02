@@ -118,6 +118,10 @@ def handle_client(client, client_address):
                     if receive() != "ok":
                         return False
                     send("bye")
+                else:
+                    send("sorry")
+                    logging.info(f"[{client_address[0]}] Client send invalid action!")
+                    break
 
         except Exception as e:
             logging.error(f"Error: {e}")

@@ -67,7 +67,7 @@ def api(server, command):
         logging.info("Server found! Connecting...")
         client = connect(server["ip"], 4456)
         if client:
-            if authenticate(client, server["key"]):
+            if authenticate(client, server["secret"]):
                 sendMessage(client, command)
                 result = receiveMessage(client)
                 logging.info("--> Finish access over api successful!")
@@ -80,7 +80,7 @@ def api(server, command):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--name", required=True, help="Name of satellite to send sync command(s)")
-    parser.add_argument("--items", nargs="+", required=True, help="List items to sync")
+    parser.add_argument("--item", required=True, help="Item to sync")
 
     args = parser.parse_args()
 
@@ -89,12 +89,11 @@ def main():
         server = serversFile[args.name]
         logging.info("Server found! Connecting...")
         client = connect(server["ip"], 4456)
-        authenticate(client, server["key"])
+        authenticate(client, server["secret"])
 
-        #for item in args.items:
-        sendMessage(client, "ping")
-
-        receiveMessage(client)
+        sendMessage(client, f"sync {args.item}")
+        result = receiveMessage(client)
+        logging.info(f"Receive result: {result}")
 
         logging.info("Finished!")
         client.close()

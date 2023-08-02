@@ -28,7 +28,7 @@ def register(name, ip, gateway, school):
             "gateway": gateway,
             "school": school,
             "port": 4456,
-            "key": ''.join(random.choices(string.ascii_uppercase + string.digits, k=50))
+            "secret": ''.join(random.choices(string.ascii_uppercase + string.digits, k=50))
         }
         with open("/var/lib/linuxmuster-cachingserver/servers.json", "w") as f:
             json.dump(servers, f, indent=4)
