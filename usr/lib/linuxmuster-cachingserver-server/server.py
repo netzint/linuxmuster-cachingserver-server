@@ -44,8 +44,12 @@ def handle_client(client, client_address):
         while not successful:
             if tryCounter > 5:
                 return False
-            send(f"send {filename} {filesize}")
-            if receive() != "ok":
+            send(f"send {filename} {filesize} {md5hash}")
+            r = receive()
+            if r == "skip":
+                successful = True
+                return successful
+            if r != "ok":
                 return False
             with open(filename, "rb") as f:
                 while True:
@@ -115,8 +119,14 @@ def handle_client(client, client_address):
                             logging.error(f"[{client_address[0]}] Error sending file '{pattern}'")
                             break
                     send("finished")
-                    if receive() != "ok":
+                    if receive() != "posthook?":
                         return False
+                    posthook = action["posthook"] if "posthook" in action else "no"
+                    send(posthook)
+                    if receive() != "done":
+                        logging.error(f"[{client_address[0]}] Client said posthook failed!")
+                    else:
+                        logging.info(f"[{client_address[0]}] Client said posthook was successful!")
                     send("bye")
                 else:
                     send("sorry")
