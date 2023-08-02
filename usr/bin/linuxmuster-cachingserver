@@ -21,7 +21,6 @@ from client import api as cachingserver_api
 
 def register(name, ip, gateway, school):
     servers = json.load(open("/var/lib/linuxmuster-cachingserver/servers.json", "r"))
-    config = json.load(open("/etc/linuxmuster-cachingserver/config.json", "r"))
     if name not in servers:
         servers[name] = {
             "name": name,
@@ -35,7 +34,7 @@ def register(name, ip, gateway, school):
             json.dump(servers, f, indent=4)
 
         servers[name]["server_ip"] = socket.gethostbyname(socket.gethostname())
-        servers[name]["server_port"] = config["port"]
+        servers[name]["server_port"] = 4455
         servers[name]["server_name"] = socket.gethostname().split(".", 1)[0]
         servers[name]["server_domain"] = socket.gethostname().split(".", 1)[1]
 

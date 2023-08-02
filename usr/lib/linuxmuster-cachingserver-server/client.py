@@ -65,7 +65,7 @@ def api(server, command):
     if server in serversFile:
         server = serversFile[server]
         logging.info("Server found! Connecting...")
-        client = connect(server["ip"], server["port"])
+        client = connect(server["ip"], 4456)
         if client:
             if authenticate(client, server["key"]):
                 sendMessage(client, command)
@@ -88,7 +88,7 @@ def main():
     if args.name in serversFile:
         server = serversFile[args.name]
         logging.info("Server found! Connecting...")
-        client = connect(server["ip"], server["port"])
+        client = connect(server["ip"], 4456)
         authenticate(client, server["key"])
 
         #for item in args.items:

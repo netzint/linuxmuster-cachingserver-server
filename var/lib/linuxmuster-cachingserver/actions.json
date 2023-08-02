@@ -1,43 +1,12 @@
 {
-    "rsync-config": {
-        "pattern": "/etc/rsyncd.conf"
-    },
-    "rsync-secret": {
-        "pattern": "/etc/rsyncd.secrets"
-    },
-    "ssh-keys": {
-        "pattern": "/root/.ssh/id_rsa*"
-    },
-    "linuxmuster-setup": {
-        "pattern": "/var/lib/linuxmuster/setup.ini"
-    },
-    "linbo-start-conf": {
-        "pattern": "/srv/linbo/start.conf.*"
-    },
-    "linbo-grub-conf": {
-        "pattern": "/srv/linbo/boot/grub/*.cfg"
-    },
-    "linbo-image-reg": {
-        "pattern": "/srv/linbo/images/*/*.reg"
-    },
-    "linbo-image-postsync": {
-        "pattern": "/srv/linbo/images/*/*.postsync"
-    },
-    "linbo-image-prestart": {
-        "pattern": "/srv/linbo/images/*/*.prestart"
-    },
-    "linbo-linbocmd": {
-        "pattern": "/srv/linbo/linbocmd/*",
-        "delete": true
-    },
-    "linuxmuster-devices": {
-        "pattern": "/etc/linuxmuster/sophomorix/#school#/devices.csv"
-    },
-    "linbo-log": {
-        "pattern": "/srv/linbo/log/*"
+    "images": {
+        "pattern": "/srv/linbo/images/*/*"
     },
     "dhcp": {
         "pattern": "/etc/dhcp/subnets.conf;/etc/dhcp/devices/#school#.conf",
-        "posthook": "systemctl restart isc-dhcp-server" 
+        "posthook": "systemctl restart isc-dhcp-server"
+    },
+    "linbo": {
+        "pattern": "/etc/rsyncd.conf;/etc/rsyncd.secrets;/root/.ssh/id_rsa;/var/lib/linuxmuster/setup.ini;/srv/linbo/start.conf.*;/srv/linbo/boot/grub/*.cfg;/srv/linbo/linbocmd/*;/etc/linuxmuster/sophomorix/#school#/devices.csv;/srv/linbo/log/*"
     }
 }
