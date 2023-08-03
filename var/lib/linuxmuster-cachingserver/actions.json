@@ -1,9 +1,10 @@
 {
     "images": {
-        "pattern": "/srv/linbo/images/*/*"
+        "pattern": "/srv/linbo/images/*/*",
+        "posthook": "systemctl restart linbo-torrent"
     },
     "dhcp": {
-        "pattern": "/etc/dhcp/subnets.conf;/etc/dhcp/devices/#school#.conf",
+        "pattern": "/etc/dhcp/subnets.conf;/etc/dhcp/devices/*.conf;/etc/dhcp/devices.conf",
         "posthook": "systemctl restart isc-dhcp-server"
     },
     "linbo": {

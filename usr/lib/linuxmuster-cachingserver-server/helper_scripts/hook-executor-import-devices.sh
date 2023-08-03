@@ -7,7 +7,6 @@
 # 
 #########################################################
 
-ITEMS="linbo-start-conf,linbo-grub-conf,linuxmuster-devices,dhcp"
-
 echo "Initiating synchronization on satellite-server..."
-/usr/bin/linuxmuster-cachingserver sync $@ --items $ITEMS
+/usr/bin/linuxmuster-cachingserver sync $@ --items linbo
+/usr/bin/linuxmuster-cachingserver sync $@ --items dhcp

@@ -47,6 +47,7 @@ def handle_client(client, client_address):
             send(f"send {filename} {filesize} {md5hash}")
             r = receive()
             if r == "skip":
+                logging.info(f"[{client.getpeername()[0]}] File on target system is already the same!")
                 successful = True
                 return successful
             if r != "ok":
