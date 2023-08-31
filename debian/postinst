@@ -12,18 +12,21 @@ case "$1" in
 
         mkdir -p /var/log/linuxmuster/cachingserver/
 
-        systemctl enable linuxmuster-cachingserver-server
-        systemctl start linuxmuster-cachingserver-server
+        systemctl enable linuxmuster-cachingserver
+        systemctl start linuxmuster-cachingserver
 
         systemctl enable isc-dhcp-server
         systemctl enable tftpd-hpa
-
         systemctl enable rsync
+
+        systemctl start tftpd-hpa
         systemctl start rsync
 
         mkdir -p /var/lib/linuxmuster/hooks/device-import.post.d
         rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hook-executor-import-devices.sh
-        ln -s /usr/lib/linuxmuster-cachingserver-server/helper_scripts/hook-executor-import-devices.sh /var/lib/linuxmuster/hooks/device-import.post.d/
+        rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hack-macct-to-ad.sh
+        ln -s /usr/lib/linuxmuster-cachingserver/helper_scripts/hook-executor-import-devices.sh /var/lib/linuxmuster/hooks/device-import.post.d/
+        ln -s /usr/lib/linuxmuster-cachingserver/helper_scripts/hack-macct-to-ad.sh /var/lib/linuxmuster/hooks/device-import.post.d/
 
         exit 0
         ;;

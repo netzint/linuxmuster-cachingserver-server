@@ -6,6 +6,6 @@ Build-Depends: debhelper (>= 4.0.0), fakeroot
 
 Package: linuxmuster-cachingserver-server
 Architecture: all
-Depends: linuxmuster-linbo7
+Depends: linuxmuster-linbo7, python3-fastapi, uvicorn
 Homepage: www.netzint.de
 Description: Linuxmuster Cachingserver for Main-Server

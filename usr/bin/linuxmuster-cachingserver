@@ -12,12 +12,7 @@ import json
 import random
 import string
 import socket
-
-import sys
-
-sys.path.insert(0, '/usr/lib/linuxmuster-cachingserver-server/')
-
-from client import api as cachingserver_api
+import requests
 
 def register(name, ip, gateway, school):
     servers = json.load(open("/var/lib/linuxmuster-cachingserver/servers.json", "r"))
@@ -27,8 +22,8 @@ def register(name, ip, gateway, school):
             "ip": ip,
             "gateway": gateway,
             "school": school,
-            "port": 4456,
-            "secret": ''.join(random.choices(string.ascii_uppercase + string.digits, k=50))
+            "secret": ''.join(random.choices(string.ascii_uppercase + string.digits, k=50)),
+            "images": []
         }
         with open("/var/lib/linuxmuster-cachingserver/servers.json", "w") as f:
             json.dump(servers, f, indent=4)
@@ -38,35 +33,32 @@ def register(name, ip, gateway, school):
         servers[name]["server_name"] = socket.gethostname().split(".", 1)[0]
         servers[name]["server_domain"] = socket.gethostname().split(".", 1)[1]
 
-        return { "status": True, "message": "Server added!", "command": servers[name] }
+        command = "linuxmuster-cachingserver setup "
+        command += "--serverip " + servers[name]["server_ip"] + " "
+        command += "--serverport " + str(servers[name]["server_port"]) + " "
+        command += "--servername " + servers[name]["server_name"] + " "
+        command += "--serverdomain " + servers[name]["server_domain"] + " "
+        command += "--name " + servers[name]["name"] + " "
+        command += "--ip " + servers[name]["ip"] + " "
+        command += "--gateway " + servers[name]["gateway"] + " "
+        command += "--school " + servers[name]["school"] + " "
+        command += "--secret \"" + servers[name]["secret"] + "\""
+
+        return { "status": True, "message": "Server added! Please run: %s" % command }
     else:
         return { "status": False, "message": "Server already exist!" }
 
-def output(text, printjson=False):
+def output(output, printjson=False):
     if printjson:
-        print(json.dumps(text))
+        print(json.dumps(output))
     else:
-        status = "SUCCESS" if text["status"] else "ERROR"
-        if "icon" in text:
-            print("[%s] %s %s" % (status, text["icon"], text["message"]))
+        if type(output) == list:
+            for line in output:
+                icon = "✅" if line["status"] else "❌"
+                print(f"{icon} {line['message']}")
         else:
-            print("[%s] %s" % (status, text["message"]))
-        if "command" in text:
-            print()
-            print("###########################################################")
-            print("Please run the following command on the satellite-server:")
-            command = "linuxmuster-cachingserver setup "
-            command += "--serverip " + text["command"]["server_ip"] + " "
-            command += "--serverport " + str(text["command"]["server_port"]) + " "
-            command += "--servername " + text["command"]["server_name"] + " "
-            command += "--serverdomain " + text["command"]["server_domain"] + " "
-            command += "--name " + text["command"]["name"] + " "
-            command += "--ip " + text["command"]["ip"] + " "
-            command += "--gateway " + text["command"]["gateway"] + " "
-            command += "--school " + text["command"]["school"] + " "
-            command += "--key \"" + text["command"]["key"] + "\""
-            print(command)
-            print("###########################################################")
+            icon = "✅" if line["status"] else "❌"
+            print(f"{icon} {line['message']}")
 
 def getRegisteredServers():
     file = open("/var/lib/linuxmuster-cachingserver/servers.json", "r")
@@ -74,13 +66,16 @@ def getRegisteredServers():
     file.close()
     return json_result
 
-def getNamesfromSchool(school):
+def getIPFromCachingServer(server):
     servers = getRegisteredServers()
-    result = []
-    for server in servers:
-        if servers[server]["school"] == school:
-            result.append(server)
-    return result
+    return servers[server]["ip"]
+
+def apiRequest(ip, url):
+    try:
+        request = requests.get(f"http://{ip}:4457/{url}")
+        return request.json()
+    except:
+        return { "status": False, "data": None }
 
 def main():
     parser = argparse.ArgumentParser()
@@ -95,12 +90,11 @@ def main():
     parserRegister.add_argument("-s", "--school", required=True, help='School for the cachingserver')
 
     parserStatus = subparsers.add_parser("status", help="Status of caching server(s)")
-    parserStatus.add_argument("-n", "--name", required=True, help='Name of the cachingserver (hostname)')
+    parserStatus.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
 
     parserSync = subparsers.add_parser("sync", help="Init sync for specific item on caching server(s)")
     parserSync.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
-    parserSync.add_argument("-s", "--school", required=False, help='School of the cachingserver')
-    parserSync.add_argument("-i", "--items", required=True, help='Item to initiate sync for (seperated by , )')
+    parserSync.add_argument("-i", "--item", required=True, help='Item to initiate sync for')
     
     args = parser.parse_args()
 
@@ -128,29 +122,22 @@ def main():
         result = register(args.name, args.ip, args.gateway, args.school)
         output(result, args.json)
     elif args.command == "status":
-        result = cachingserver_api(args.name, "ping")
-        if result == "pong":
-            output({ "status": True, "message": "%s is up and running" % args.name, "icon": "✅" }, args.json)
+        if args.name:
+            result = apiRequest(getIPFromCachingServer(args.name), "status")
+            output(result, args.json)
         else:
-            output({ "status": False, "message": "%s is not reachable" % args.name, "icon": "❌" }, args.json)
-    elif args.command == "sync":
-        if args.school:
-            names = getNamesfromSchool(args.school)
-        elif args.name:
-            names = [args.name]
-        else:
-            output({ "status": False, "message": "Please choose --name oder --school!" }, args.json)
-        
-        if len(names) > 0:
-            for name in names:
-                result = cachingserver_api(name, "sync " + args.items)
-                if result == "done":
-                    output({ "status": True, "message": "Sync for %s on %s successfully initiated!" % (args.items, name), "icon": "✅" }, args.json)
-                else:
-                    output({ "status": False, "message": "Failed to initiate sync for %s on %s!" % (args.items, name), "icon": "❌" }, args.json)
-        else:
-            output({ "status": False, "message": "No entry found for given parameters!" }, args.json)   
+            results = []
+            for server in getRegisteredServers():
+                result = apiRequest(getIPFromCachingServer(server), "status")
+                results.append(result)
+            output(results, args.json)
 
+    elif args.command == "sync":
+        result = apiRequest(getIPFromCachingServer(args.name), f"files/sync/{args.item}")
+        output(result, args.json)
+
+    else:
+        output({ "status": False, "message": "No entry found for given parameters!" }, args.json)   
 
 if __name__ == "__main__":
     main()
