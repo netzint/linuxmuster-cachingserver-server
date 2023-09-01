@@ -28,6 +28,8 @@ case "$1" in
         ln -s /usr/lib/linuxmuster-cachingserver/helper_scripts/hook-executor-import-devices.sh /var/lib/linuxmuster/hooks/device-import.post.d/
         ln -s /usr/lib/linuxmuster-cachingserver/helper_scripts/hack-macct-to-ad.sh /var/lib/linuxmuster/hooks/device-import.post.d/
 
+        pip3 install fastapi -U
+
         exit 0
         ;;
     upgrade|abort-upgrade)

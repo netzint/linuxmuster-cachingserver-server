@@ -37,7 +37,7 @@ def main():
                     logging.info(f"Generating entry for '{filename}'...")
                     result[filename] = {
                         "filename": filename.split("/")[len(filename.split("/")) - 1],
-                        "hash": HashHelper(filename).getMD5(),
+                        "hash": HashHelper(filename, save=False).getMD5(),
                         "action": action
                     }
 

@@ -13,36 +13,11 @@
             <br>
             <div class="server-box">
                 <i class="fa fa-desktop" style="font-size: 20pt;"></i><br>
-                <span translate>The LMN Server</span>
-                <hr>
-                <uib-accordion style="text-align: left;">
-                    <div uib-accordion-group class="panel-default" is-open="status.open">
-                      <uib-accordion-heading>
-                        {{'Click her to show all files to sync...' | translate}} <i class="pull-right fa" ng-class="{'fa-arrow-up': status.open, 'fa-arrow-down': !status.open}"></i>
-                      </uib-accordion-heading>
-                      <table class="table">
-                        <tr>
-                            <th translate>Filename</th>
-                            <th translate>Hash</th>
-                            <th translate>Action</th>
-                        </tr>
-                        <tr ng:repeat="server in serverfilehashes">
-                            <td>{{server.filename}}</td>
-                            <td>{{server.hash}}</td>
-                            <td style="text-align: center;">
-                                <i class="fa fa-file-image-o" ng:if="server.action == 'images'" title="Images"></i>
-                                <i class="fa fa-heart" ng:if="server.action == 'linbo'" title="Linbo"></i>
-                                <i class="fa fa-address-card" ng:if="server.action == 'dhcp'" title="DHCP"></i>
-                            </td>
-                        </tr>
-                      </table>
-                    </div>
-                  </uib-accordion>
+                <h3 translate>The LINUXMUSTER-Server</h3>
             </div>
             <div class="cache-box" ng:repeat="s in server">
                 <i class="fa fa-desktop" style="font-size: 20pt;"></i><br>
-                {{s.name}} <span translate>for</span> {{s.school | uppercase}}
-                <br>
+                <h3>{{s.name}} <span translate>for</span> {{s.school | uppercase}}</h3>
                 <br>
                 <div ng:if="s.status"><i class="fa fa-circle" style="color:green;"></i> Server is online!</div>
                 <div ng:if="!s.status"><i class="fa fa-circle" style="color:red;"></i> Server is offline!</div>
@@ -54,7 +29,7 @@
                             <i ng:if="s.filestatus.summary.images" class="fa fa-circle" style="color:green;"></i>
                             <i ng:if="!s.filestatus.summary.images" class="fa fa-circle" style="color:red;"></i>
                         </td>
-                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncServer(s.name, 'images')">Refresh</button></td>
+                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncFiles(s.name, 'images')">Refresh</button></td>
                     </tr>
                     <tr>
                         <td style="text-align: left;vertical-align: middle;">Linbo</td>
@@ -62,7 +37,7 @@
                             <i ng:if="s.filestatus.summary.linbo" class="fa fa-circle" style="color:green;"></i>
                             <i ng:if="!s.filestatus.summary.linbo" class="fa fa-circle" style="color:red;"></i>
                         </td>
-                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncServer(s.name, 'linbo')">Refresh</button></td>
+                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncFiles(s.name, 'linbo')">Refresh</button></td>
                     </tr>
                     <tr>
                         <td style="text-align: left;vertical-align: middle;">DHCP</td>
@@ -70,7 +45,7 @@
                             <i ng:if="s.filestatus.summary.dhcp" class="fa fa-circle" style="color:green;"></i>
                             <i ng:if="!s.filestatus.summary.dhcp" class="fa fa-circle" style="color:red;"></i>
                         </td>
-                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncServer(s.name, 'dhcp')">Refresh</button></td>
+                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncFiles(s.name, 'dhcp')">Refresh</button></td>
                     </tr>
                 </table>
             </div>
@@ -85,10 +60,33 @@
                 <tr ng:repeat="i in images">
                     <th>{{i.filename}} ({{serverfilehashes[i.path].hash}})</th>
                     <td ng:repeat="s in server">
-                        <input type="checkbox" ng:checked="s.images.indexOf(i.filename)!==-1" />
-                        <i ng:if="serverfilehashes[i.path].hash == s.filestatus.result[i.path].hash" class="fa fa-circle" style="color:green;"></i>&nbsp;
-                        <i ng:if="serverfilehashes[i.path].hash != s.filestatus.result[i.path].hash" class="fa fa-circle" style="color:red;"></i>
-                        <span ng:if="s.filestatus.result[i.path] != null">({{s.filestatus.result[i.path].hash}})</span>
+                        <input type="checkbox" ng:click="toggleImageForServer(s.images.indexOf(i.filename)!==-1,s.name,i.filename)" ng:checked="s.images.indexOf(i.filename)!==-1" />&nbsp;
+                        <i ng:if="serverfilehashes[i.path].hash == s.filestatus.result[i.path].hash_on_cache" class="fa fa-circle" style="color:green;"></i>
+                        <i ng:if="serverfilehashes[i.path].hash != s.filestatus.result[i.path].hash_on_cache" class="fa fa-circle" style="color:red;"></i>
+                        <span>{{s.filestatus.result[i.path].hash_on_cache}}</span>
+                    </td>
+                </tr>
+            </table>
+        </uib:tab>
+        <uib:tab heading="{{'Files'|translate}}" ng-click="getServer()">
+            <br>
+            <table class="table table-bordered">
+                <tr>
+                    <td>Action</td>
+                    <td>Filename</td>
+                    <th translate>This server</th>
+                    <th ng:repeat="s in server">{{s.name}} ({{s.school}})</th>
+                </tr>
+                <tr ng:repeat="(path, file) in serverfilehashes">
+                    <td style="text-align: center;">
+                        <i class="fa fa-file-image-o" ng:if="file.action == 'images'" title="Images"></i>
+                        <i class="fa fa-heart" ng:if="file.action == 'linbo'" title="Linbo"></i>
+                        <i class="fa fa-address-card" ng:if="file.action == 'dhcp'" title="DHCP"></i>
+                    </td>
+                    <th title="{{path}}">{{file.filename}}</th>
+                    <td>{{file.hash}}</td>
+                    <td ng:repeat="s in server" ng-style="{'background-color': s.filestatus.result[path].hash_on_cache == file.hash ? 'green' : 'red','color': s.filestatus.result[path].hash_on_cache == file.hash ? 'white' : 'black'}">
+                        {{s.filestatus.result[path].hash_on_cache}}
                     </td>
                 </tr>
             </table>

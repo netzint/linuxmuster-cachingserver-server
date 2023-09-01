@@ -48,6 +48,36 @@ class Handler(HttpPlugin):
         for path in glob("/srv/linbo/images/*/*.qcow2", recursive = True):
             result.append({"path": path, "filename": os.path.basename(path)})
         return {"status": True, "data": result}
+    
+    @post(r'/api/lmn/cachingserver/addimagetoserver')
+    #@authorize('lmn_cachingserver:show')
+    @endpoint(api=True)
+    def handle_api_lmn_cachingserver_add_Image_to_server(self, http_context):
+        server = http_context.json_body()['server']
+        imagename = http_context.json_body()['imagename']
+        with open("/var/lib/linuxmuster-cachingserver/servers.json", "r") as f:
+            serverfile = json.load(f)
+        if imagename in serverfile[server]["images"]:
+            return {"status": True, "data": "Image already selected!"}
+        else:
+            serverfile[server]["images"].append(imagename)
+            with open("/var/lib/linuxmuster-cachingserver/servers.json", "w") as f:
+                json.dump(serverfile, f, indent=4)
+
+    @post(r'/api/lmn/cachingserver/removeimagefromserver')
+    #@authorize('lmn_cachingserver:show')
+    @endpoint(api=True)
+    def handle_api_lmn_cachingserver_remove_Image_from_server(self, http_context):
+        server = http_context.json_body()['server']
+        imagename = http_context.json_body()['imagename']
+        with open("/var/lib/linuxmuster-cachingserver/servers.json", "r") as f:
+            serverfile = json.load(f)
+        if imagename not in serverfile[server]["images"]:
+            return {"status": True, "data": "Image was already removed!"}
+        else:
+            serverfile[server]["images"].remove(imagename)
+            with open("/var/lib/linuxmuster-cachingserver/servers.json", "w") as f:
+                json.dump(serverfile, f, indent=4)
         
     @post(r'/api/lmn/cachingserver/server-status')
     #@authorize('lmn_cachingserver:show')
@@ -55,7 +85,7 @@ class Handler(HttpPlugin):
     def handle_api_lmn_cachingserver_server_status(self, http_context):
         server = http_context.json_body()['server']
         try:
-            request = requests.get("http://" + server + ":8000/status")
+            request = requests.get("http://" + server + ":4457/status")
             return request.json()
         except Exception:
             return {"status": False, "data": ""}
@@ -65,8 +95,9 @@ class Handler(HttpPlugin):
     @endpoint(api=True)
     def handle_api_lmn_cachingserver_file_status(self, http_context):
         server = http_context.json_body()['server']
+        images = http_context.json_body()['images']
         try:
-            request = requests.get("http://" + server + ":8000/files/hashes/get")
+            request = requests.get("http://" + server + ":4457/files/hashes/get")
             hashes_on_cachingserver =  request.json()
         except Exception:
             return {"status": False, "data": ""}
@@ -82,29 +113,35 @@ class Handler(HttpPlugin):
             result[filename] = hashes_on_server[filename]
             if result[filename]["action"] not in summary:
                 summary[result[filename]["action"]] = True
-            if filename in hashes_on_cachingserver:
-                result[filename]["hash_on_cache"] = hashes_on_cachingserver[filename]["hash"]
+            if filename in hashes_on_cachingserver["data"]:
+                result[filename]["hash_on_cache"] = hashes_on_cachingserver["data"][filename]["hash"]
                 result[filename]["exist"] = True
-                if hashes_on_server[filename]["hash"] == hashes_on_cachingserver[filename]["hash"]:
+                if hashes_on_server[filename]["hash"] == hashes_on_cachingserver["data"][filename]["hash"]:
                     result[filename]["latest"] = True
                 else:
                     result[filename]["latest"] = False
-                    summary[result[filename]["action"]] = True
+                    for image in images:
+                        if image in filename:
+                            summary[result[filename]["action"]] = False
             else:
-                result[filename]["hash_on_cache"] = "-"
+                result[filename]["hash_on_cache"] = None
                 result[filename]["exist"] = False
                 result[filename]["latest"] = False
-                summary[result[filename]["action"]] = True
+                for image in images:
+                    if image in filename:
+                        summary[result[filename]["action"]] = False
 
         return {"status": True, "data": {"summary": summary, "result": result}}
         
     
-    @post(r'/api/lmn/cachingserver/syncserver')
+    @post(r'/api/lmn/cachingserver/file-sync')
     #@authorize('lmn_cachingserver:show')
     @endpoint(api=True)
-    def handle_api_lmn_cachingserver_syncserver(self, http_context):
-        servername = http_context.json_body()['servername']
-        syncitem = http_context.json_body()['syncitem']
-        command = ['sudo', '/usr/bin/linuxmuster-cachingserver', '--json', 'sync', '-n', servername, '-i', syncitem]
-        output = subprocess.check_output(command, shell=False)
-        return json.loads(output.decode())
+    def handle_api_lmn_cachingserver_file_sync(self, http_context):
+        server = http_context.json_body()['server']
+        item = http_context.json_body()['item']
+        try:
+            request = requests.get(f"http://{server}:4457/files/sync/{item}")
+            return request.json()
+        except Exception as e:
+            return {"status": False, "data": str(e)}
