@@ -120,16 +120,22 @@ class Handler(HttpPlugin):
                     result[filename]["latest"] = True
                 else:
                     result[filename]["latest"] = False
-                    for image in images:
-                        if image in filename:
-                            summary[result[filename]["action"]] = False
+                    if result[filename]["action"] == "images":
+                        for image in images:
+                            if image in filename:
+                                summary[result[filename]["action"]] = False
+                    else:
+                        summary[result[filename]["action"]] = False
             else:
                 result[filename]["hash_on_cache"] = None
                 result[filename]["exist"] = False
                 result[filename]["latest"] = False
-                for image in images:
-                    if image in filename:
-                        summary[result[filename]["action"]] = False
+                if result[filename]["action"] == "images":
+                    for image in images:
+                        if image in filename:
+                            summary[result[filename]["action"]] = False
+                else:
+                    summary[result[filename]["action"]] = False
 
         return {"status": True, "data": {"summary": summary, "result": result}}
         

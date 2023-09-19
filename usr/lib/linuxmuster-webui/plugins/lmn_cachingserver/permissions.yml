@@ -1,0 +1,8 @@
+globaladministrator:
+- 'sidebar:view:/view/lmn/cachingserver: true'
+schooladministrator:
+- 'sidebar:view:/view/lmn/cachingserver: false'
+student:
+- 'sidebar:view:/view/lmn/cachingserver: false'
+teacher:
+- 'sidebar:view:/view/lmn/cachingserver: false'

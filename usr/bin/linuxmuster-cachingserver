@@ -44,9 +44,9 @@ def register(name, ip, gateway, school):
         command += "--school " + servers[name]["school"] + " "
         command += "--secret \"" + servers[name]["secret"] + "\""
 
-        return { "status": True, "message": "Server added! Please run: %s" % command }
+        return { "status": True, "data": "Server added! Please run: %s" % command }
     else:
-        return { "status": False, "message": "Server already exist!" }
+        return { "status": False, "data": "Server already exist!" }
 
 def output(output, printjson=False):
     if printjson:
@@ -55,10 +55,10 @@ def output(output, printjson=False):
         if type(output) == list:
             for line in output:
                 icon = "✅" if line["status"] else "❌"
-                print(f"{icon} {line['message']}")
+                print(f"{icon} {line['data']}")
         else:
-            icon = "✅" if line["status"] else "❌"
-            print(f"{icon} {line['message']}")
+            icon = "✅" if output["status"] else "❌"
+            print(f"{icon} {output['data']}")
 
 def getRegisteredServers():
     file = open("/var/lib/linuxmuster-cachingserver/servers.json", "r")
@@ -66,16 +66,25 @@ def getRegisteredServers():
     file.close()
     return json_result
 
-def getIPFromCachingServer(server):
+def getIPFromCachingServerByName(servername):
     servers = getRegisteredServers()
-    return servers[server]["ip"]
+    if servername in servers:
+        return servers[servername]["ip"]
+    return None
+
+def getIPFromCachingServerBySchool(school):
+    servers = getRegisteredServers()
+    for server in servers:
+        if servers[server]["school"] == school:
+            return servers[server]["ip"]
+    return None
 
 def apiRequest(ip, url):
     try:
         request = requests.get(f"http://{ip}:4457/{url}")
         return request.json()
     except:
-        return { "status": False, "data": None }
+        return { "status": False, "data": "API Request failed!" }
 
 def main():
     parser = argparse.ArgumentParser()
@@ -94,12 +103,13 @@ def main():
 
     parserSync = subparsers.add_parser("sync", help="Init sync for specific item on caching server(s)")
     parserSync.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
+    parserSync.add_argument("-s", "--school", required=False, help='School of the cachingserver')
     parserSync.add_argument("-i", "--item", required=True, help='Item to initiate sync for')
     
     args = parser.parse_args()
 
     if not args.command:
-        output({ "status": False, "message": "Command not set!" }, args.json)
+        output({ "status": False, "data": "Command not set!" }, args.json)
         exit(1)
 
     if not args.json:
@@ -123,21 +133,27 @@ def main():
         output(result, args.json)
     elif args.command == "status":
         if args.name:
-            result = apiRequest(getIPFromCachingServer(args.name), "status")
+            result = apiRequest(getIPFromCachingServerByName(args.name), "status")
             output(result, args.json)
         else:
             results = []
             for server in getRegisteredServers():
-                result = apiRequest(getIPFromCachingServer(server), "status")
+                result = apiRequest(getIPFromCachingServerByName(server), "status")
+                result["data"] = f"{server}"
                 results.append(result)
             output(results, args.json)
 
     elif args.command == "sync":
-        result = apiRequest(getIPFromCachingServer(args.name), f"files/sync/{args.item}")
+        if args.name:
+            result = apiRequest(getIPFromCachingServerByName(args.name), f"files/sync/{args.item}")
+        elif args.school:
+            result = apiRequest(getIPFromCachingServerBySchool(args.school), f"files/sync/{args.item}")
+        else:
+            result = { "status": False, "data": "Please enter name or school of cachingserver" }
         output(result, args.json)
 
     else:
-        output({ "status": False, "message": "No entry found for given parameters!" }, args.json)   
+        output({ "status": False, "data": "No entry found for given parameters!" }, args.json)   
 
 if __name__ == "__main__":
     main()

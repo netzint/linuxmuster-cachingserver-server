@@ -12,15 +12,16 @@ case "$1" in
 
         mkdir -p /var/log/linuxmuster/cachingserver/
 
-        systemctl enable linuxmuster-cachingserver
-        systemctl start linuxmuster-cachingserver
-
         systemctl enable isc-dhcp-server
         systemctl enable tftpd-hpa
         systemctl enable rsync
+        systemctl enable linuxmuster-cachingserver
 
         systemctl start tftpd-hpa
         systemctl start rsync
+        systemctl start linuxmuster-cachingserver
+
+        systemctl restart cron
 
         mkdir -p /var/lib/linuxmuster/hooks/device-import.post.d
         rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hook-executor-import-devices.sh
@@ -29,6 +30,7 @@ case "$1" in
         ln -s /usr/lib/linuxmuster-cachingserver/helper_scripts/hack-macct-to-ad.sh /var/lib/linuxmuster/hooks/device-import.post.d/
 
         pip3 install fastapi -U
+        pip3 install uvicorn
 
         exit 0
         ;;
