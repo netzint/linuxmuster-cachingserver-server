@@ -1,3 +1,9 @@
+linuxmuster-cachingserver-server (1.1.2-0) lmn72-testing; urgency=low
+
+  * Fix somes bugs
+
+ -- Lukas Spitznagel <lukas.spitznagel@netzint.de>  Fri, 19 Sep 2023 17:28:00 +0200
+
 linuxmuster-cachingserver-server (1.1.1-0) lmn72-testing; urgency=low
 
   * Fix somes bugs
