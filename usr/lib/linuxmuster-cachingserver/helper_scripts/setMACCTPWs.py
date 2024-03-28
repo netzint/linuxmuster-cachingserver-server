@@ -8,10 +8,15 @@
 import subprocess
 import argparse
 
-scope="OU=SCHOOLS,DC=linuxmuster,DC=lan"
+def getSambaDomain():
+    with open("/var/lib/linuxmuster/setup.ini") as f:
+        for line in f.readlines():
+            if "basedn" in line:
+                return line.split("=")[1].strip()
+    return "DC=linuxmuster,DC=lan"
 
 def getDNs():
-    dns=subprocess.check_output("ldbsearch --url=/var/lib/samba/private/sam.ldb -b " + scope + " | grep ^dn | awk '{ print $2 }'", shell=True)
+    dns=subprocess.check_output("ldbsearch --url=/var/lib/samba/private/sam.ldb -b " + getSambaDomain() + " | grep ^dn | awk '{ print $2 }'", shell=True)
     dnArray=dns.decode().split("\n")
     return dnArray
 
