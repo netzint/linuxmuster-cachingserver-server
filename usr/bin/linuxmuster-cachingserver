@@ -31,7 +31,7 @@ def register(name, ip, gateway, school):
         servers[name]["server_ip"] = socket.gethostbyname(socket.gethostname())
         servers[name]["server_port"] = 4455
         servers[name]["server_name"] = socket.gethostname().split(".", 1)[0]
-        servers[name]["server_domain"] = socket.gethostname().split(".", 1)[1]
+        servers[name]["server_domain"] = getSambaDomain()
 
         command = "linuxmuster-cachingserver setup "
         command += "--serverip " + servers[name]["server_ip"] + " "
@@ -59,6 +59,13 @@ def output(output, printjson=False):
         else:
             icon = "✅" if output["status"] else "❌"
             print(f"{icon} {output['data']}")
+
+def getSambaDomain():
+    with open("/var/lib/linuxmuster/setup.ini") as f:
+        for line in f.readlines():
+            if "domainname" in line:
+                return line.split("=")[1].strip()
+    return "linuxmuster.lan"
 
 def getRegisteredServers():
     file = open("/var/lib/linuxmuster-cachingserver/servers.json", "r")
@@ -147,9 +154,14 @@ def main():
         if args.name:
             result = apiRequest(getIPFromCachingServerByName(args.name), f"files/sync/{args.item}")
         elif args.school:
-            result = apiRequest(getIPFromCachingServerBySchool(args.school), f"files/sync/{args.item}")
+            ip = getIPFromCachingServerBySchool(args.school)
+            if ip is not None:
+                result = apiRequest(ip, f"files/sync/{args.item}")
+            else:
+                result = { "status": True, "data": "This school is not configured,so I have nothing to do!" }
         else:
             result = { "status": False, "data": "Please enter name or school of cachingserver" }
+
         output(result, args.json)
 
     else:
