@@ -15,22 +15,30 @@ case "$1" in
         systemctl enable isc-dhcp-server
         systemctl enable tftpd-hpa
         systemctl enable rsync
-        systemctl enable linuxmuster-cachingserver
-
-        systemctl start tftpd-hpa
-        systemctl start rsync
-        systemctl start linuxmuster-cachingserver
-
-        systemctl restart cron
 
         mkdir -p /var/lib/linuxmuster/hooks/device-import.post.d
         rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hook-executor-import-devices.sh
         rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hack-macct-to-ad.sh
-        ln -s /usr/lib/linuxmuster-cachingserver/helper_scripts/hook-executor-import-devices.sh /var/lib/linuxmuster/hooks/device-import.post.d/
-        ln -s /usr/lib/linuxmuster-cachingserver/helper_scripts/hack-macct-to-ad.sh /var/lib/linuxmuster/hooks/device-import.post.d/
 
-        pip3 install fastapi -U
-        pip3 install uvicorn
+        mkdir -p /etc/rsyncd.d
+
+        if ! grep -Fxq "&include /etc/rsyncd.d" /etc/rsyncd.conf; then
+            sed -i '1s/^/\&include \/etc\/rsyncd.d\n/' /etc/rsyncd.conf
+        fi
+
+        python3 /usr/share/linuxmuster-cachingserver/migrate-server-list.py
+
+        systemctl restart tftpd-hpa
+        systemctl restart rsync
+        systemctl restart cron
+
+        touch /var/lib/linuxmuster-cachingserver/cachingserver_rsync.secrets
+        chmod 600 /var/lib/linuxmuster-cachingserver/cachingserver_rsync.secrets
+
+        # Update WebUI permissions and restart
+        python3 /usr/lib/linuxmuster-webui/etc/update_scripts/merge-permissions.py
+        /usr/sbin/sophomorix-ui
+        systemctl restart linuxmuster-webui
 
         exit 0
         ;;

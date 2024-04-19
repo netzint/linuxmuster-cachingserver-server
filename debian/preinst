@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    install|configure)
+        systemctl stop linuxmuster-cachingserver
+        systemctl disable linuxmuster-cachingserver
+
+        exit 0
+        ;;
+    upgrade|abort-upgrade)
+        echo "No work to do..."
+        exit 0
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 0
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

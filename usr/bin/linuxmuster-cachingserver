@@ -44,6 +44,9 @@ def register(name, ip, gateway, school):
         command += "--school " + servers[name]["school"] + " "
         command += "--secret \"" + servers[name]["secret"] + "\""
 
+        with open("/var/lib/linuxmuster-cachingserver/cachingserver_rsync.secrets", "a") as f:
+            f.write(servers[name]["name"] + ":" + servers[name]["secret"] + "\n")
+
         return { "status": True, "data": "Server added! Please run: %s" % command }
     else:
         return { "status": False, "data": "Server already exist!" }
