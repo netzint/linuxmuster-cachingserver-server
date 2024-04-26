@@ -1,4 +1,4 @@
-angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController', function($scope, $http, pageTitle, gettext, notify) {
+angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController', function($scope, $http, $uibModal, pageTitle, gettext, notify) {
 
     $scope.start = () => {
         $http.get('/api/lmn/cachingserver/isinstalled').then( (resp) => {
@@ -10,15 +10,18 @@ angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController
     }
 
     $scope.getServer = () => {
-        $scope.getServerFileHashes();
         $http.get('/api/lmn/cachingserver/getserver').then( (resp) => {
             $scope.server = resp.data;
-            for(let server in $scope.server) {
-                $http.post('/api/lmn/cachingserver/server-status', {server: $scope.server[server]["ip"]}).then( (resp) => {
-                    $scope.server[server]["status"] =  resp.data.status;
+            for(let server of $scope.server) {
+                console.log(server)
+                $http.post('/api/lmn/cachingserver/server-status', {server: server["ip"]}).then( (resp) => {
+                    server["status"] =  resp.data.status;
                 });
-                $http.post('/api/lmn/cachingserver/file-status', {server: $scope.server[server]["ip"], images: $scope.server[server]["images"]}).then( (resp) => {
-                    $scope.server[server]["filestatus"] =  resp.data.data;
+                $http.post('/api/lmn/cachingserver/configuration-status', {server: server["ip"]}).then( (resp) => {
+                    server["configurationstatus"] =  resp.data.data.status;
+                });
+                $http.post('/api/lmn/cachingserver/images-status', {server: server["ip"]}).then( (resp) => {
+                    server["imagesstatus"] =  resp.data.data.status;
                 });
             }
         });
@@ -31,7 +34,6 @@ angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController
     }
 
     $scope.toggleImageForServer = (currentStatus, server, imagename) => {
-        console.log(currentStatus)
         if (!currentStatus) {
             // add image to server
             $http.post('/api/lmn/cachingserver/addimagetoserver', {server: server, imagename: imagename}).then( (resp) => {
@@ -47,8 +49,8 @@ angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController
         $scope.getServer();
     }
 
-    $scope.syncFiles = (server, item) => {
-        $http.post('/api/lmn/cachingserver/file-sync', {server: server, item: item}).then( (resp) => {
+    $scope.syncConfiguration = (server) => {
+        $http.post('/api/lmn/cachingserver/configuration-sync', {server: server}).then( (resp) => {
             if(resp.data.status) {
                 notify.success(gettext('Sync initiated successfully!'));
             }
@@ -59,9 +61,30 @@ angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController
         });
     }
 
-    $scope.getServerFileHashes = () => {
-        $http.get('/api/lmn/cachingserver/getserverfilehashed').then( (resp) => {
-            $scope.serverfilehashes = resp.data;
+    $scope.syncImages = (server) => {
+        $http.post('/api/lmn/cachingserver/images-sync', {server: server}).then( (resp) => {
+            if(resp.data.status) {
+                notify.success(gettext('Sync initiated successfully!'));
+            }
+            else {
+                notify.error(gettext('Failed to initiate sync!'));
+                console.log("Error: " + resp.data.data)
+            }
+        });
+    }
+
+    $scope.getLogs = (server) => {
+        $uibModal.open({
+            templateUrl: '/lmn_cachingserver:resources/partial/logs.modal.html',
+            controller: 'Lmn_cachingserverLogsModalController',
+            size: 'lg',
+            resolve: {
+                server: function () {
+                    return server
+                }
+            }
+        }).result.then((result) => {
+            $scope.getServer();
         });
     }
 
@@ -75,3 +98,31 @@ angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController
 
 });
 
+angular.module('lmn.cachingserver').controller('Lmn_cachingserverLogsModalController', function($scope, $http, $timeout, $interval, pageTitle, gettext, notify, $uibModalInstance, server) {
+    
+    $scope.server = server;
+    
+    $scope.loadLogs = () => {
+        $http.post('/api/lmn/cachingserver/logs', {server: server}).then( (resp) => {
+            console.log(resp)
+            if(resp.data.status) {
+                $scope.logs = resp.data.data.data;
+            }
+            else {
+                console.log("Error: " + resp.data.data);
+            }
+            $timeout(function() {
+                var element = document.getElementById('logPre');
+                element.scrollTop = element.scrollHeight;
+            }, 0);
+        });
+    }
+
+    $scope.close = () => {
+        $interval.cancel(loginterval);
+        $uibModalInstance.close();
+    }
+
+    $scope.loadLogs();
+    var loginterval = $interval($scope.loadLogs, 1000);
+});

@@ -111,10 +111,13 @@ def main():
     parserStatus = subparsers.add_parser("status", help="Status of caching server(s)")
     parserStatus.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
 
-    parserSync = subparsers.add_parser("sync", help="Init sync for specific item on caching server(s)")
-    parserSync.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
-    parserSync.add_argument("-s", "--school", required=False, help='School of the cachingserver')
-    parserSync.add_argument("-i", "--item", required=True, help='Item to initiate sync for')
+    updateConfigParser = subparsers.add_parser("update-config", help="Update configuration on cachingserver", dest="updateconfig")
+    updateConfigParser.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
+    updateConfigParser.add_argument("-s", "--school", required=False, help='School of the cachingserver')
+
+    updateImagesParser = subparsers.add_parser("update-images", help="Update images on cachingserver", dest="updateimages")
+    updateImagesParser.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
+    updateImagesParser.add_argument("-s", "--school", required=False, help='School of the cachingserver')
     
     args = parser.parse_args()
 
@@ -143,25 +146,39 @@ def main():
         output(result, args.json)
     elif args.command == "status":
         if args.name:
-            result = apiRequest(getIPFromCachingServerByName(args.name), "status")
+            result = apiRequest(getIPFromCachingServerByName(args.name), "v1/status")
             output(result, args.json)
         else:
             results = []
             for server in getRegisteredServers():
-                result = apiRequest(getIPFromCachingServerByName(server), "status")
+                result = apiRequest(getIPFromCachingServerByName(server), "v1/status")
                 result["data"] = f"{server}"
                 results.append(result)
             output(results, args.json)
 
-    elif args.command == "sync":
+    elif args.command == "updateconfig":
         if args.name:
-            result = apiRequest(getIPFromCachingServerByName(args.name), f"files/sync/{args.item}")
+            result = apiRequest(getIPFromCachingServerByName(args.name), "/v1/configuration/sync")
         elif args.school:
             ip = getIPFromCachingServerBySchool(args.school)
             if ip is not None:
-                result = apiRequest(ip, f"files/sync/{args.item}")
+                result = apiRequest(ip, "/v1/configuration/sync")
             else:
-                result = { "status": True, "data": "This school is not configured,so I have nothing to do!" }
+                result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
+        else:
+            result = { "status": False, "data": "Please enter name or school of cachingserver" }
+
+        output(result, args.json)
+
+    elif args.command == "updateimages":
+        if args.name:
+            result = apiRequest(getIPFromCachingServerByName(args.name), "/v1/images/sync")
+        elif args.school:
+            ip = getIPFromCachingServerBySchool(args.school)
+            if ip is not None:
+                result = apiRequest(ip, "/v1/images/sync")
+            else:
+                result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         else:
             result = { "status": False, "data": "Please enter name or school of cachingserver" }
 

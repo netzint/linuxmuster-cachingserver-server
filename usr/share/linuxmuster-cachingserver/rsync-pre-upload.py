@@ -4,7 +4,9 @@
 #
 
 import os
+import sys
 
-from rsync-hook-handler import RSyncHookHandler
+sys.path.append("/usr/share/linuxmuster-cachingserver")
+from RSyncHookHandler import RSyncHookHandler
 
-RSyncHookHandler(RSyncHookHandler.HANDLER_TYPE_PRE, RSyncHookHandler.HANDLER_DIRECTION_UPLOAD, os.environ)
+RSyncHookHandler(RSyncHookHandler.HANDLER_TYPE_PRE, RSyncHookHandler.HANDLER_DIRECTION_UPLOAD, dict(os.environ))

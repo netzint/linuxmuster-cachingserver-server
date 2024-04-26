@@ -11,82 +11,31 @@
     <uib:tabset active="activeTab">
         <uib:tab heading="{{'Server'|translate}}" ng-click="getServer()">
             <br>
-            <div class="server-box">
-                <i class="fa fa-desktop" style="font-size: 20pt;"></i><br>
-                <h3 translate>The LINUXMUSTER-Server</h3>
-            </div>
-            <div class="cache-box" ng:repeat="s in server">
-                <i class="fa fa-desktop" style="font-size: 20pt;"></i><br>
-                <h3>{{s.name}} <span translate>for</span> {{s.school | uppercase}}</h3>
-                <br>
-                <div ng:if="s.status"><i class="fa fa-circle" style="color:green;"></i> Server is online!</div>
-                <div ng:if="!s.status"><i class="fa fa-circle" style="color:red;"></i> Server is offline!</div>
-                <hr>
-                <table class="table table-bordered">
-                    <tr>
-                        <td style="text-align: left;vertical-align: middle;">Images</td>
-                        <td style="text-align: center;vertical-align: middle;">
-                            <i ng:if="s.filestatus.summary.images" class="fa fa-circle" style="color:green;"></i>
-                            <i ng:if="!s.filestatus.summary.images" class="fa fa-circle" style="color:red;"></i>
-                        </td>
-                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncFiles(s.name, 'images')">Refresh</button></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left;vertical-align: middle;">Linbo</td>
-                        <td style="text-align: center;vertical-align: middle;">
-                            <i ng:if="s.filestatus.summary.linbo" class="fa fa-circle" style="color:green;"></i>
-                            <i ng:if="!s.filestatus.summary.linbo" class="fa fa-circle" style="color:red;"></i>
-                        </td>
-                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncFiles(s.name, 'linbo')">Refresh</button></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left;vertical-align: middle;">DHCP</td>
-                        <td style="text-align: center;vertical-align: middle;">
-                            <i ng:if="s.filestatus.summary.dhcp" class="fa fa-circle" style="color:green;"></i>
-                            <i ng:if="!s.filestatus.summary.dhcp" class="fa fa-circle" style="color:red;"></i>
-                        </td>
-                        <td><button type="button" class="btn btn-primary btn-sm" ng:click="syncFiles(s.name, 'dhcp')">Refresh</button></td>
-                    </tr>
-                </table>
-            </div>
+            <input ng:model="query" type="search" autofocus class="form-control" placeholder="Filter" typeahead-min-length="1" />
+            <br>
+            <ul class="list-group list-group-flush" ng:repeat="s in server | filter:{name:query}">
+                <li class="list-group-item" ng:style="{ 'border-left' : (s.status) ? '7px solid green' : '7px solid red' }">
+                    <div style="font-size: larger;font-weight: bold;">{{s.name}} <span translate>for</span> {{s.school | uppercase}}</div>
+                    <br>
+                    <button type="button" class="btn" ng:click="syncConfiguration(s.ip)" ng:class="{'btn-success': s.configurationstatus, 'btn-warning': s.configurationstatus == null, 'btn-danger': s.configurationstatus == false}" translate>Configuration</button>
+                    <button type="button" class="btn" ng:click="syncImages(s.ip)" ng:class="{'btn-success': s.imagesstatus, 'btn-warning': s.imagesstatus == null, 'btn-danger': s.imagesstatus == false}">Images</button>
+                    <button type="button" class="btn" ng:click="getLogs(s.ip)">Show Logs</button>
+                </li>
+            </ul>
         </uib:tab>
         <uib:tab heading="{{'Images'|translate}}" ng-click="getImages()">
             <br>
-            <table class="table table-bordered">
+            <input ng:model="query" type="search" autofocus class="form-control" placeholder="Filter" typeahead-min-length="1" />
+            <br>
+            <table class="table table-bordered table-responsive-md">
                 <tr>
                     <td></td>
-                    <th ng:repeat="s in server">{{s.name}} ({{s.school}})</th>
+                    <th ng:repeat="i in images">{{i.filename}}</th>
                 </tr>
-                <tr ng:repeat="i in images">
-                    <th>{{i.filename}} ({{serverfilehashes[i.path].hash}})</th>
-                    <td ng:repeat="s in server">
-                        <input type="checkbox" ng:click="toggleImageForServer(s.images.indexOf(i.filename)!==-1,s.name,i.filename)" ng:checked="s.images.indexOf(i.filename)!==-1" />&nbsp;
-                        <i ng:if="serverfilehashes[i.path].hash == s.filestatus.result[i.path].hash_on_cache" class="fa fa-circle" style="color:green;"></i>
-                        <i ng:if="serverfilehashes[i.path].hash != s.filestatus.result[i.path].hash_on_cache" class="fa fa-circle" style="color:red;"></i>
-                        <span>{{s.filestatus.result[i.path].hash_on_cache}}</span>
-                    </td>
-                </tr>
-            </table>
-        </uib:tab>
-        <uib:tab heading="{{'Files'|translate}}" ng-click="getServer()">
-            <br>
-            <table class="table table-bordered">
-                <tr>
-                    <td>Action</td>
-                    <td>Filename</td>
-                    <th translate>This server</th>
-                    <th ng:repeat="s in server">{{s.name}} ({{s.school}})</th>
-                </tr>
-                <tr ng:repeat="(path, file) in serverfilehashes">
-                    <td style="text-align: center;">
-                        <i class="fa fa-file-image-o" ng:if="file.action == 'images'" title="Images"></i>
-                        <i class="fa fa-heart" ng:if="file.action == 'linbo'" title="Linbo"></i>
-                        <i class="fa fa-address-card" ng:if="file.action == 'dhcp'" title="DHCP"></i>
-                    </td>
-                    <th title="{{path}}">{{file.filename}}</th>
-                    <td>{{file.hash}}</td>
-                    <td ng:repeat="s in server" ng-style="{'background-color': s.filestatus.result[path].hash_on_cache == file.hash ? 'green' : 'red','color': s.filestatus.result[path].hash_on_cache == file.hash ? 'white' : 'black'}">
-                        {{s.filestatus.result[path].hash_on_cache}}
+                <tr ng:repeat="s in server | filter:{name:query}">
+                    <th>{{s.name}} ({{s.school}})</th>
+                    <td ng:repeat="i in images">
+                        <input type="checkbox" ng:click="toggleImageForServer(s.images.indexOf(i.imagename)!==-1,s.name,i.imagename)" ng:checked="s.images.indexOf(i.imagename)!==-1" />
                     </td>
                 </tr>
             </table>
