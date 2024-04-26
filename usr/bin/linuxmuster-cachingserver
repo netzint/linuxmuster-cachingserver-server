@@ -13,6 +13,7 @@ import random
 import string
 import socket
 import requests
+import os
 
 def register(name, ip, gateway, school):
     servers = json.load(open("/var/lib/linuxmuster-cachingserver/servers.json", "r"))
@@ -29,13 +30,11 @@ def register(name, ip, gateway, school):
             json.dump(servers, f, indent=4)
 
         servers[name]["server_ip"] = socket.gethostbyname(socket.gethostname())
-        servers[name]["server_port"] = 4455
         servers[name]["server_name"] = socket.gethostname().split(".", 1)[0]
         servers[name]["server_domain"] = getSambaDomain()
 
         command = "linuxmuster-cachingserver setup "
         command += "--serverip " + servers[name]["server_ip"] + " "
-        command += "--serverport " + str(servers[name]["server_port"]) + " "
         command += "--servername " + servers[name]["server_name"] + " "
         command += "--serverdomain " + servers[name]["server_domain"] + " "
         command += "--name " + servers[name]["name"] + " "
@@ -46,6 +45,8 @@ def register(name, ip, gateway, school):
 
         with open("/var/lib/linuxmuster-cachingserver/cachingserver_rsync.secrets", "a") as f:
             f.write(servers[name]["name"] + ":" + servers[name]["secret"] + "\n")
+
+        os.chmod("/var/lib/linuxmuster-cachingserver/cachingserver_rsync.secrets", 600)
 
         return { "status": True, "data": "Server added! Please run: %s" % command }
     else:
@@ -101,7 +102,7 @@ def main():
     parser.add_argument("--debug", required=False, help="Print debug output", action="store_true")
     parser.add_argument("--json", required=False, help="Print output as json", action="store_true")
 
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command", required=True)
     parserRegister = subparsers.add_parser("register", help="Register a new caching server")
     parserRegister.add_argument("-n", "--name", required=True, help='Name of the cachingserver (hostname)')
     parserRegister.add_argument("-i", "--ip", required=True, help='IP of the cachingserver')
@@ -111,11 +112,11 @@ def main():
     parserStatus = subparsers.add_parser("status", help="Status of caching server(s)")
     parserStatus.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
 
-    updateConfigParser = subparsers.add_parser("update-config", help="Update configuration on cachingserver", dest="updateconfig")
+    updateConfigParser = subparsers.add_parser("update-config", help="Update configuration on cachingserver")
     updateConfigParser.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
     updateConfigParser.add_argument("-s", "--school", required=False, help='School of the cachingserver')
 
-    updateImagesParser = subparsers.add_parser("update-images", help="Update images on cachingserver", dest="updateimages")
+    updateImagesParser = subparsers.add_parser("update-images", help="Update images on cachingserver")
     updateImagesParser.add_argument("-n", "--name", required=False, help='Name of the cachingserver (hostname)')
     updateImagesParser.add_argument("-s", "--school", required=False, help='School of the cachingserver')
     
@@ -156,9 +157,13 @@ def main():
                 results.append(result)
             output(results, args.json)
 
-    elif args.command == "updateconfig":
+    elif args.command == "update-config":
         if args.name:
-            result = apiRequest(getIPFromCachingServerByName(args.name), "/v1/configuration/sync")
+            ip = getIPFromCachingServerByName(args.name)
+            if ip is not None:
+                result = apiRequest(ip, "/v1/configuration/sync")
+            else:
+                result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         elif args.school:
             ip = getIPFromCachingServerBySchool(args.school)
             if ip is not None:
@@ -170,9 +175,13 @@ def main():
 
         output(result, args.json)
 
-    elif args.command == "updateimages":
+    elif args.command == "update-images":
         if args.name:
-            result = apiRequest(getIPFromCachingServerByName(args.name), "/v1/images/sync")
+            ip = getIPFromCachingServerByName(args.name)
+            if ip is not None:
+                result = apiRequest(ip, "/v1/images/sync")
+            else:
+                result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         elif args.school:
             ip = getIPFromCachingServerBySchool(args.school)
             if ip is not None:
