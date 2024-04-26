@@ -20,6 +20,8 @@ case "$1" in
         rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hook-executor-import-devices.sh
         rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hack-macct-to-ad.sh
 
+        ln -s /usr/lib/linuxmuster-cachingserver/hook-executor-import-devices.sh /var/lib/linuxmuster/hooks/device-import.post.d/hook-executor-import-devices.sh
+
         mkdir -p /etc/rsyncd.d
 
         if ! grep -Fxq "&include /etc/rsyncd.d" /etc/rsyncd.conf; then
