@@ -3,8 +3,10 @@ set -e
 
 case "$1" in
     install|configure)
-        systemctl stop linuxmuster-cachingserver
-        systemctl disable linuxmuster-cachingserver
+        if systemctl --all --type service | grep linuxmuster-cachingserver; then
+            systemctl stop linuxmuster-cachingserver
+            systemctl disable linuxmuster-cachingserver
+        fi
 
         exit 0
         ;;
