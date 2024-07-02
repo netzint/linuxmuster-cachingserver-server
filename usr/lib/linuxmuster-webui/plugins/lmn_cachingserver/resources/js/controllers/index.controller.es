@@ -1,5 +1,7 @@
 angular.module('lmn.cachingserver').controller('Lmn_cachingserverIndexController', function($scope, $http, $uibModal, pageTitle, gettext, notify) {
 
+    pageTitle.set(gettext('Cachingserver Manager'));
+
     $scope.start = () => {
         $http.get('/api/lmn/cachingserver/isinstalled').then( (resp) => {
             $scope.isinstalled = resp.data;

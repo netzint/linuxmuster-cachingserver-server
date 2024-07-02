@@ -7,7 +7,5 @@
 # 
 #########################################################
 
-SCHOOL=$2
-
 echo "Initiating synchronization on satellite-server..."
 /usr/bin/linuxmuster-cachingserver update-config $@

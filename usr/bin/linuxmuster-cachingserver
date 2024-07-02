@@ -161,13 +161,13 @@ def main():
         if args.name:
             ip = getIPFromCachingServerByName(args.name)
             if ip is not None:
-                result = apiRequest(ip, "/v1/configuration/sync")
+                result = apiRequest(ip, "v1/configuration/sync")
             else:
                 result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         elif args.school:
             ip = getIPFromCachingServerBySchool(args.school)
             if ip is not None:
-                result = apiRequest(ip, "/v1/configuration/sync")
+                result = apiRequest(ip, "v1/configuration/sync")
             else:
                 result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         else:
@@ -179,13 +179,13 @@ def main():
         if args.name:
             ip = getIPFromCachingServerByName(args.name)
             if ip is not None:
-                result = apiRequest(ip, "/v1/images/sync")
+                result = apiRequest(ip, "v1/images/sync")
             else:
                 result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         elif args.school:
             ip = getIPFromCachingServerBySchool(args.school)
             if ip is not None:
-                result = apiRequest(ip, "/v1/images/sync")
+                result = apiRequest(ip, "v1/images/sync")
             else:
                 result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         else:
