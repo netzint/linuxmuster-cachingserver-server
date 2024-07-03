@@ -15,6 +15,11 @@ case "$1" in
         systemctl enable isc-dhcp-server
         systemctl enable tftpd-hpa
         systemctl enable rsync
+        systemctl enable linuxmuster-cachingserver-api
+
+        pip3 install fastapi -U
+        pip3 install uvicorn
+        pip3 install jc
 
         mkdir -p /var/lib/linuxmuster/hooks/device-import.post.d
         rm -f /var/lib/linuxmuster/hooks/device-import.post.d/hook-executor-import-devices.sh
@@ -33,6 +38,7 @@ case "$1" in
         systemctl restart tftpd-hpa
         systemctl restart rsync
         systemctl restart cron
+        systemctl restart linuxmuster-cachingserver-api
 
         touch /var/lib/linuxmuster-cachingserver/cachingserver_rsync.secrets
         chmod 600 /var/lib/linuxmuster-cachingserver/cachingserver_rsync.secrets

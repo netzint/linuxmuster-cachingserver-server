@@ -47,6 +47,12 @@ def get_macct_of_a_computer(computername: str):
     """
     Get the unicodePwd and the supplementalCredentials for the given computer.
     """
+
+    if "." in computername:
+        computername = computername.split(".")[0]
+
+    computername = computername.upper()
+
     computer_unicodepwd = run_command(["/usr/bin/ldbsearch", LINUXMUSTER_LDB_PATH, "(&(sAMAccountName=" + computername + "$))", "unicodePwd"])
     computer_supplementalcredentials = run_command(["/usr/bin/ldbsearch", LINUXMUSTER_LDB_PATH, "(&(sAMAccountName=" + computername + "$))", "supplementalCredentials"])
 
@@ -65,6 +71,12 @@ def set_macct_of_a_computer(computername: str, macct: MACCT):
     """
     Set the macct file (unicodePwd and supplementalCredentials) for the given computer
     """
+
+    if "." in computername:
+        computername = computername.split(".")[0]
+
+    computername = computername.upper()
+
     computer_dn = run_command(["/usr/bin/ldbsearch", LINUXMUSTER_LDB_PATH, "(&(sAMAccountName=" + computername + "$))", "dn"])
     if computer_dn == None:
         logging.error(f"Could not find dn for computer '{computername}'...")
