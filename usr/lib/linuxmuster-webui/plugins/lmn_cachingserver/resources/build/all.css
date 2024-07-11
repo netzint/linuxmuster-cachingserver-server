@@ -1,0 +1,16 @@
+.server-box {
+  text-align: center;
+  width: 100%;
+  border: 3px dashed black;
+  padding: 10px;
+}
+
+.cache-box {
+  text-align: center;
+  width: calc(50% - 20px);
+  border: 2px solid black;
+  padding: 10px;
+  margin: 10px;
+  float: left;
+}
+
