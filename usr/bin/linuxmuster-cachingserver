@@ -171,11 +171,11 @@ def main():
             else:
                 result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         else:
-            results = []
+            result = []
             for server in getRegisteredServers():
-                result = apiRequest(getIPFromCachingServerByName(server), "v1/configuration/sync")
-                result["data"] = f"{server}"
-                results.append(result)
+                res = apiRequest(getIPFromCachingServerByName(server), "v1/configuration/sync")
+                res["data"] = f"{server}"
+                result.append(res)
 
         output(result, args.json)
 
@@ -193,11 +193,11 @@ def main():
             else:
                 result = { "status": True, "data": "This school is not configured, so I have nothing to do!" }
         else:
-            results = []
+            result = []
             for server in getRegisteredServers():
-                result = apiRequest(getIPFromCachingServerByName(server), "v1/images/sync")
-                result["data"] = f"{server}"
-                results.append(result)
+                res = apiRequest(getIPFromCachingServerByName(server), "v1/images/sync")
+                res["data"] = f"{server}"
+                result.append(res)
 
         output(result, args.json)
 
