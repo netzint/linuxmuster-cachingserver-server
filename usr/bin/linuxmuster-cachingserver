@@ -92,7 +92,7 @@ def getIPFromCachingServerBySchool(school):
 
 def apiRequest(ip, url):
     try:
-        request = requests.get(f"http://{ip}:4457/{url}")
+        request = requests.get(f"http://{ip}:4457/{url}", timeout=3)
         return request.json()
     except:
         return { "status": False, "data": "API Request failed!" }
