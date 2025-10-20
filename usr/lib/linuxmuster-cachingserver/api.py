@@ -17,12 +17,16 @@ import re
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from v2.api_v2 import router as v2_router
+
 logging.basicConfig(filename='/var/log/linuxmuster/cachingserver/api.log',format='%(levelname)s: %(asctime)s %(message)s', level=logging.DEBUG)
 
 with open("/var/lib/linuxmuster-cachingserver/servers.json") as f:
     config = json.load(f)
 
 app = FastAPI()
+
+app.include_router(router=v2_router)
 
 class MACCT(BaseModel):
     macct: str
